@@ -7,6 +7,7 @@ import os.path as osp
 import os
 from datetime import datetime
 import json
+from collections import defaultdict as dd
 
 import numpy as np
 
@@ -32,7 +33,8 @@ __status__ = "Development"
 
 
 def train_victim(model, trainset, out_path, batch_size=64, testset=None, device=None, num_workers=10, lr=0.1,
-                 momentum=0.5, lr_step=30, lr_gamma=0.1, resume=None, epochs=100, log_interval=100, **kwargs):
+                 momentum=0.5, lr_step=30, lr_gamma=0.1, resume=None, epochs=100, log_interval=100, weighted_loss=False,
+                 **kwargs):
     if device is None:
         device = torch.device('cuda')
     if not osp.exists(out_path):
@@ -45,8 +47,20 @@ def train_victim(model, trainset, out_path, batch_size=64, testset=None, device=
     else:
         test_loader = None
 
+    if weighted_loss:
+        class_to_count = dd(int)
+        for _, y in trainset.samples:
+            class_to_count[y] += 1
+        class_sample_count = [class_to_count[c] for c, cname in enumerate(trainset.classes)]
+        print('Counts per class: ', class_sample_count)
+        weight = np.min(class_sample_count) / torch.Tensor(class_sample_count)
+        weight = weight.to(device)
+        print('Using weights: ', weight)
+    else:
+        weight = None
+
     # Optimizer
-    criterion = nn.CrossEntropyLoss(reduction='mean')
+    criterion = nn.CrossEntropyLoss(reduction='mean', weight=weight)
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=5e-4)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=lr_step, gamma=lr_gamma)
     start_epoch = 1
@@ -115,6 +129,7 @@ def main():
                         help='LR Decay Rate')
     parser.add_argument('-w', '--num_workers', metavar='N', type=int, help='# Worker threads to load data', default=10)
     parser.add_argument('--pretrained', action='store_true', help='Use pretrained network', default=False)
+    parser.add_argument('--weighted-loss', action='store_true', help='Use a weighted loss', default=False)
     args = parser.parse_args()
     params = vars(args)
 
