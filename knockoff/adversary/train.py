@@ -44,65 +44,6 @@ class TransferSet(ImageFolder):
         self.target_transform = target_transform
 
 
-def train_adversary(model, trainset, out_path, batch_size=64, testset=None, device=None, num_workers=10, lr=0.1,
-                    momentum=0.5, lr_step=30, lr_gamma=0.1, resume=None, epochs=100, log_interval=100,
-                    weighted_loss=False, checkpoint_suffix='', **kwargs):
-    if device is None:
-        device = torch.device('cuda')
-    if not osp.exists(out_path):
-        knockoff_utils.create_dir(out_path)
-
-    # Data loaders
-    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    if testset is not None:
-        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    else:
-        test_loader = None
-
-    # Optimizer
-    criterion_train = model_utils.soft_cross_entropy
-    criterion_test = nn.CrossEntropyLoss(reduction='mean')
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=5e-4)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=lr_step, gamma=lr_gamma)
-    start_epoch = 1
-    best_test_acc, test_acc = -1., -1.
-
-    # Resume if required
-    if resume is not None:
-        model_path = resume
-        if osp.isfile(model_path):
-            print("=> loading checkpoint '{}'".format(model_path))
-            checkpoint = torch.load(model_path)
-            start_epoch = checkpoint['epoch']
-            best_test_acc = checkpoint['best_acc']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(resume, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(model_path))
-
-    model_out_path = osp.join(out_path, 'checkpoint{}.pth.tar'.format(checkpoint_suffix))
-    for epoch in range(start_epoch, epochs + 1):
-        scheduler.step(epoch)
-        train_loss, train_acc = model_utils.train_step(model, train_loader, criterion_train, optimizer, epoch, device,
-                                                       log_interval=log_interval)
-        if test_loader is not None:
-            test_loss, test_acc = model_utils.test_step(model, test_loader, criterion_test, device, epoch=epoch)
-
-        if test_acc >= best_test_acc:
-            state = {
-                'epoch': epoch,
-                'arch': model.__class__,
-                'state_dict': model.state_dict(),
-                'best_acc': test_acc,
-                'optimizer': optimizer.state_dict(),
-                'created_on': str(datetime.now()),
-            }
-            torch.save(state, model_out_path)
-
-    return model
-
-
 def main():
     parser = argparse.ArgumentParser(description='Train a model')
     # Required arguments
@@ -121,7 +62,7 @@ def main():
                         help='learning rate (default: 0.01)')
     parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
                         help='SGD momentum (default: 0.5)')
-    parser.add_argument('--log-interval', type=int, default=100, metavar='N',
+    parser.add_argument('--log-interval', type=int, default=50, metavar='N',
                         help='how many batches to wait before logging training status')
     parser.add_argument('--resume', default=None, type=str, metavar='PATH',
                         help='path to latest checkpoint (default: none)')
@@ -178,9 +119,11 @@ def main():
         torch.manual_seed(cfg.DEFAULT_SEED)
         torch.cuda.manual_seed(cfg.DEFAULT_SEED)
 
-        transferset = TransferSet(transferset_samples[:b], transform=transform_utils.DefaultTransforms.train_transform)
+        transferset = TransferSet(transferset_samples[:b], transform=transform_utils.DefaultTransforms.test_transform)
         checkpoint_suffix = '.{}'.format(b)
-        train_adversary(model, transferset, model_dir, testset=testset, checkpoint_suffix=checkpoint_suffix, **params)
+        criterion_train = model_utils.soft_cross_entropy
+        model_utils.train_model(model, transferset, model_dir, testset=testset, criterion_train=criterion_train,
+                                checkpoint_suffix=checkpoint_suffix, **params)
 
     # Store arguments
     params['created_on'] = str(datetime.now())

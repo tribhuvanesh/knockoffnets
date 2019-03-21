@@ -32,76 +32,6 @@ __email__ = "orekondy@mpi-inf.mpg.de"
 __status__ = "Development"
 
 
-def train_victim(model, trainset, out_path, batch_size=64, testset=None, device=None, num_workers=10, lr=0.1,
-                 momentum=0.5, lr_step=30, lr_gamma=0.1, resume=None, epochs=100, log_interval=100, weighted_loss=False,
-                 **kwargs):
-    if device is None:
-        device = torch.device('cuda')
-    if not osp.exists(out_path):
-        knockoff_utils.create_dir(out_path)
-
-    # Data loaders
-    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
-    if testset is not None:
-        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
-    else:
-        test_loader = None
-
-    if weighted_loss:
-        class_to_count = dd(int)
-        for _, y in trainset.samples:
-            class_to_count[y] += 1
-        class_sample_count = [class_to_count[c] for c, cname in enumerate(trainset.classes)]
-        print('=> counts per class: ', class_sample_count)
-        weight = np.min(class_sample_count) / torch.Tensor(class_sample_count)
-        weight = weight.to(device)
-        print('=> using weights: ', weight)
-    else:
-        weight = None
-
-    # Optimizer
-    criterion = nn.CrossEntropyLoss(reduction='mean', weight=weight)
-    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=5e-4)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=lr_step, gamma=lr_gamma)
-    start_epoch = 1
-    best_test_acc, test_acc = -1., -1.
-
-    # Resume if required
-    if resume is not None:
-        model_path = resume
-        if osp.isfile(model_path):
-            print("=> loading checkpoint '{}'".format(model_path))
-            checkpoint = torch.load(model_path)
-            start_epoch = checkpoint['epoch']
-            best_test_acc = checkpoint['best_acc']
-            model.load_state_dict(checkpoint['state_dict'])
-            optimizer.load_state_dict(checkpoint['optimizer'])
-            print("=> loaded checkpoint '{}' (epoch {})".format(resume, checkpoint['epoch']))
-        else:
-            print("=> no checkpoint found at '{}'".format(model_path))
-
-    model_out_path = osp.join(out_path, 'checkpoint.pth.tar')
-    for epoch in range(start_epoch, epochs + 1):
-        scheduler.step(epoch)
-        train_loss, train_acc = model_utils.train_step(model, train_loader, criterion, optimizer, epoch, device,
-                                                       log_interval=log_interval)
-        if test_loader is not None:
-            test_loss, test_acc = model_utils.test_step(model, test_loader, criterion, device, epoch=epoch)
-
-        if test_acc >= best_test_acc:
-            state = {
-                'epoch': epoch,
-                'arch': model.__class__,
-                'state_dict': model.state_dict(),
-                'best_acc': test_acc,
-                'optimizer': optimizer.state_dict(),
-                'created_on': str(datetime.now()),
-            }
-            torch.save(state, model_out_path)
-
-    return model
-
-
 def main():
     parser = argparse.ArgumentParser(description='Train a model')
     # Required arguments
@@ -161,7 +91,7 @@ def main():
 
     # ----------- Train
     out_path = params['out_path']
-    train_victim(model, trainset, testset=testset, **params)
+    model_utils.train_model(model, trainset, testset=testset, **params)
 
     # Store arguments
     params['created_on'] = str(datetime.now())

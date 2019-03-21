@@ -6,6 +6,8 @@ import argparse
 import os.path as osp
 import os
 import time
+from datetime import datetime
+from collections import defaultdict as dd
 
 import numpy as np
 
@@ -19,6 +21,7 @@ from torch.utils.data import Dataset, DataLoader
 import torchvision.models as torch_models
 
 import knockoff.config as cfg
+import knockoff.utils.utils as knockoff_utils
 
 __author__ = "Tribhuvanesh Orekondy"
 __maintainer__ = "Tribhuvanesh Orekondy"
@@ -135,3 +138,79 @@ def test_step(model, test_loader, criterion, device, epoch=0.):
                                                                          correct, total))
 
     return test_loss, acc
+
+
+def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, criterion_test=None, testset=None,
+                device=None, num_workers=10, lr=0.1, momentum=0.5, lr_step=30, lr_gamma=0.1, resume=None,
+                epochs=100, log_interval=100, weighted_loss=False, checkpoint_suffix='', **kwargs):
+    if device is None:
+        device = torch.device('cuda')
+    if not osp.exists(out_path):
+        knockoff_utils.create_dir(out_path)
+
+    # Data loaders
+    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    if testset is not None:
+        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+    else:
+        test_loader = None
+
+    if weighted_loss:
+        if not isinstance(trainset.samples[0][1], int):
+            print('Labels in trainset is of type: {}. Expected: {}.'.format(type(trainset.samples[0][1]), int))
+
+        class_to_count = dd(int)
+        for _, y in trainset.samples:
+            class_to_count[y] += 1
+        class_sample_count = [class_to_count[c] for c, cname in enumerate(trainset.classes)]
+        print('=> counts per class: ', class_sample_count)
+        weight = np.min(class_sample_count) / torch.Tensor(class_sample_count)
+        weight = weight.to(device)
+        print('=> using weights: ', weight)
+    else:
+        weight = None
+
+    # Optimizer
+    if criterion_train is None:
+        criterion_train = nn.CrossEntropyLoss(reduction='mean', weight=weight)
+    if criterion_test is None:
+        criterion_test = nn.CrossEntropyLoss(reduction='mean', weight=weight)
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=5e-4)
+    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=lr_step, gamma=lr_gamma)
+    start_epoch = 1
+    best_test_acc, test_acc = -1., -1.
+
+    # Resume if required
+    if resume is not None:
+        model_path = resume
+        if osp.isfile(model_path):
+            print("=> loading checkpoint '{}'".format(model_path))
+            checkpoint = torch.load(model_path)
+            start_epoch = checkpoint['epoch']
+            best_test_acc = checkpoint['best_acc']
+            model.load_state_dict(checkpoint['state_dict'])
+            optimizer.load_state_dict(checkpoint['optimizer'])
+            print("=> loaded checkpoint '{}' (epoch {})".format(resume, checkpoint['epoch']))
+        else:
+            print("=> no checkpoint found at '{}'".format(model_path))
+
+    model_out_path = osp.join(out_path, 'checkpoint{}.pth.tar'.format(checkpoint_suffix))
+    for epoch in range(start_epoch, epochs + 1):
+        scheduler.step(epoch)
+        train_loss, train_acc = train_step(model, train_loader, criterion_train, optimizer, epoch, device,
+                                           log_interval=log_interval)
+        if test_loader is not None:
+            test_loss, test_acc = test_step(model, test_loader, criterion_test, device, epoch=epoch)
+
+        if test_acc >= best_test_acc:
+            state = {
+                'epoch': epoch,
+                'arch': model.__class__,
+                'state_dict': model.state_dict(),
+                'best_acc': test_acc,
+                'optimizer': optimizer.state_dict(),
+                'created_on': str(datetime.now()),
+            }
+            torch.save(state, model_out_path)
+
+    return model
