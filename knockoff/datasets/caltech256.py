@@ -48,6 +48,9 @@ class Caltech256(ImageFolder):
         self.samples = [self.samples[i] for i in self.pruned_idxs]
         self.imgs = self.samples
 
+        print('=> done loading {} ({}) with {} examples'.format(self.__class__.__name__, 'train' if train else 'test',
+                                                                len(self.samples)))
+
     def _cleanup(self):
         # Remove examples belonging to class "clutter"
         clutter_idx = self.class_to_idx['257.clutter']

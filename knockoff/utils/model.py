@@ -27,7 +27,7 @@ __status__ = "Development"
 
 
 def get_net(model_name, n_output_classes=1000, **kwargs):
-    print('Loading model {} with arguments: {}'.format(model_name, kwargs))
+    print('=> loading model {} with arguments: {}'.format(model_name, kwargs))
     valid_models = [x for x in torch_models.__dict__.keys() if not x.startswith('__')]
     if model_name not in valid_models:
         raise ValueError('Model not found. Valid arguments = {}...'.format(valid_models))
@@ -55,6 +55,13 @@ def get_net(model_name, n_output_classes=1000, **kwargs):
     return model
 
 
+def soft_cross_entropy(pred, soft_targets, weights=None):
+    if weights is not None:
+        return torch.mean(torch.sum(- soft_targets * F.log_softmax(pred, dim=1) * weights, 1))
+    else:
+        return torch.mean(torch.sum(- soft_targets * F.log_softmax(pred, dim=1), 1))
+
+
 def train_step(model, train_loader, criterion, optimizer, epoch, device, log_interval=10):
     model.train()
     train_loss = 0.
@@ -75,7 +82,12 @@ def train_step(model, train_loader, criterion, optimizer, epoch, device, log_int
         train_loss += loss.item()
         _, predicted = outputs.max(1)
         total += targets.size(0)
-        correct += predicted.eq(targets).sum().item()
+        if len(targets.size()) == 2:
+            # Labels could be a posterior probability distribution. Use argmax as a proxy.
+            target_probs, target_labels = targets.max(1)
+        else:
+            target_labels = targets
+        correct += predicted.eq(target_labels).sum().item()
 
         prog = total / epoch_size
         exact_epoch = epoch + prog - 1

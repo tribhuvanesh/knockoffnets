@@ -52,10 +52,10 @@ def train_victim(model, trainset, out_path, batch_size=64, testset=None, device=
         for _, y in trainset.samples:
             class_to_count[y] += 1
         class_sample_count = [class_to_count[c] for c, cname in enumerate(trainset.classes)]
-        print('Counts per class: ', class_sample_count)
+        print('=> counts per class: ', class_sample_count)
         weight = np.min(class_sample_count) / torch.Tensor(class_sample_count)
         weight = weight.to(device)
-        print('Using weights: ', weight)
+        print('=> using weights: ', weight)
     else:
         weight = None
 
@@ -151,6 +151,7 @@ def main():
     trainset = dataset(train=True, transform=transform_utils.DefaultTransforms.train_transform)
     testset = dataset(train=False, transform=transform_utils.DefaultTransforms.test_transform)
     num_classes = len(trainset.classes)
+    params['num_classes'] = num_classes
 
     # ----------- Set up model
     model_name = params['model_arch']

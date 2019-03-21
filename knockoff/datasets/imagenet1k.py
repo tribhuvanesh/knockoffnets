@@ -19,6 +19,7 @@ from torch.utils.data import Dataset, DataLoader
 from torchvision.datasets.folder import ImageFolder, default_loader
 
 import knockoff.config as cfg
+from knockoff.utils.folder import FastImageFolder
 
 __author__ = "Tribhuvanesh Orekondy"
 __maintainer__ = "Tribhuvanesh Orekondy"
@@ -26,16 +27,18 @@ __email__ = "orekondy@mpi-inf.mpg.de"
 __status__ = "Development"
 
 
-class Indoor67(ImageFolder):
+class ImageNet1k(FastImageFolder):
+    test_frac = 0.2
+
     def __init__(self, train=True, transform=None, target_transform=None):
-        root = osp.join(cfg.DATASET_ROOT, 'indoor')
+        root = osp.join(cfg.DATASET_ROOT, 'ILSVRC2012')
         if not osp.exists(root):
             raise ValueError('Dataset not found at {}. Please download it from {}.'.format(
-                root, 'http://web.mit.edu/torralba/www/indoor.html'
+                root, 'http://image-net.org/download-images'
             ))
 
         # Initialize ImageFolder
-        super().__init__(root=osp.join(root, 'Images'), transform=transform,
+        super().__init__(root=osp.join(root, 'training_imgs'), transform=transform,
                          target_transform=target_transform)
         self.root = root
 
@@ -55,17 +58,19 @@ class Indoor67(ImageFolder):
             'test': []
         }
 
-        # ----------------- Load list of train images
-        test_images = set()
-        with open(osp.join(self.root, 'TestImages.txt')) as f:
-            for line in f:
-                test_images.add(line.strip())
+        # Note: we perform a 80-20 split of imagenet training
+        # While this is not necessary, this is to simply to keep it consistent with the paper
+        prev_state = np.random.get_state()
+        np.random.seed(cfg.DS_SEED)
 
-        for idx, (filepath, _) in enumerate(self.samples):
-            filepath = filepath.replace(osp.join(self.root, 'Images') + '/', '')
-            if filepath in test_images:
-                partition_to_idxs['test'].append(idx)
-            else:
-                partition_to_idxs['train'].append(idx)
+        idxs = np.arange(len(self.samples))
+        n_test = int(self.test_frac * len(idxs))
+        test_idxs = np.random.choice(idxs, replace=False, size=n_test).tolist()
+        train_idxs = list(set(idxs) - set(test_idxs))
+
+        partition_to_idxs['train'] = train_idxs
+        partition_to_idxs['test'] = test_idxs
+
+        np.random.set_state(prev_state)
 
         return partition_to_idxs
