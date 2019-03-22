@@ -53,7 +53,7 @@ def main():
     parser.add_argument('--budgets', metavar='B', type=str,
                         help='Comma separated values of budgets. Knockoffs will be trained for each budget.')
     # Optional arguments
-    parser.add_argument('-d', '--device', metavar='D', type=int, help='Device id. -1 for CPU.', default=0)
+    parser.add_argument('-d', '--device_id', metavar='D', type=int, help='Device id. -1 for CPU.', default=0)
     parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('-e', '--epochs', type=int, default=100, metavar='N',
@@ -77,12 +77,11 @@ def main():
     params = vars(args)
 
     torch.manual_seed(cfg.DEFAULT_SEED)
-    if params['device'] >= 0:
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(params['device'])
+    if params['device_id'] >= 0:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(params['device_id'])
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-    params['device'] = device
     model_dir = params['model_dir']
 
     # ----------- Set up transferset
@@ -123,7 +122,7 @@ def main():
         checkpoint_suffix = '.{}'.format(b)
         criterion_train = model_utils.soft_cross_entropy
         model_utils.train_model(model, transferset, model_dir, testset=testset, criterion_train=criterion_train,
-                                checkpoint_suffix=checkpoint_suffix, **params)
+                                checkpoint_suffix=checkpoint_suffix, device=device, **params)
 
     # Store arguments
     params['created_on'] = str(datetime.now())

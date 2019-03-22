@@ -25,7 +25,6 @@ import knockoff.utils.transforms as transform_utils
 import knockoff.utils.model as model_utils
 import knockoff.utils.utils as knockoff_utils
 from knockoff.victim.blackbox import Blackbox
-
 import knockoff.config as cfg
 
 __author__ = "Tribhuvanesh Orekondy"
@@ -34,50 +33,14 @@ __email__ = "orekondy@mpi-inf.mpg.de"
 __status__ = "Development"
 
 
-class Transferset(Dataset):
-    def __init__(self, dataset_name='', transform=None, target_transform=None):
-        self.dataset_name = dataset_name
-        self.samples = []
-        self.imgs = []  # Should be paths to images
-        self.targets = []
-        self.loader = torchvision.datasets.folder.default_loader
-        self.transform = transform
-        self.target_transform = target_transform
-
-    def __len__(self):
-        return len(self.samples)
-
-    def __getitem__(self, index):
-        path, target = self.samples[index]
-        sample = self.loader(path)
-        if self.transform is not None:
-            sample = self.transform(sample)
-        if self.target_transform is not None:
-            target = self.target_transform(target)
-
-        return sample, target
-
-    def append(self, sample):
-        assert len(sample) == 2, 'Sample needs to represent a single (x, y) pair'
-        assert isinstance(sample[0], str) and osp.exists(sample[0]), 'x needs to be a valid imagepath'
-        assert isinstance(sample[1], torch.Tensor), 'y needs to be a Tensor'
-
-        self.samples.append(sample)
-        self.imgs.append(sample[0])
-        self.targets.append(sample[1])
-
-
 class RandomAdversary(object):
-    def __init__(self, blackbox, queryset, out_path, batch_size=8, num_workers=15, flush_interval=1000):
+    def __init__(self, blackbox, queryset, out_path, batch_size=8):
         self.blackbox = blackbox
         self.queryset = queryset
         self.out_path = out_path
-        self.flush_interval = flush_interval
 
         self.n_queryset = len(self.queryset)
         self.batch_size = batch_size
-        self.num_workers = num_workers
-        self.queryloader = None
         self.idx_set = set()
 
         self.transferset = []  # List of tuples [(img_path, output_probs)]
@@ -88,8 +51,6 @@ class RandomAdversary(object):
         np.random.seed(cfg.DEFAULT_SEED)
         torch.manual_seed(cfg.DEFAULT_SEED)
         torch.cuda.manual_seed(cfg.DEFAULT_SEED)
-        # self.queryloader = DataLoader(self.queryset, shuffle=True, batch_size=self.batch_size,
-        #                               num_workers=self.num_workers)
 
         self.idx_set = set(range(len(self.queryset)))
         self.transferset = []
@@ -136,7 +97,7 @@ def main():
     # parser.add_argument('--tau_classes', metavar='N', type=float, help='Frac. of classes to sample from Adv data',
     #                     default=1.0)
     # ----------- Other params
-    parser.add_argument('-d', '--device', metavar='D', type=int, help='Device id', default=0)
+    parser.add_argument('-d', '--device_id', metavar='D', type=int, help='Device id', default=0)
     parser.add_argument('-w', '--nworkers', metavar='N', type=int, help='# Worker threads to load data', default=10)
     args = parser.parse_args()
     params = vars(args)
@@ -145,12 +106,11 @@ def main():
     knockoff_utils.create_dir(out_path)
 
     torch.manual_seed(cfg.DEFAULT_SEED)
-    if params['device'] >= 0:
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(params['device'])
+    if params['device_id'] >= 0:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(params['device_id'])
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-    params['device'] = device
 
     # ----------- Set up queryset
     queryset_name = params['queryset']

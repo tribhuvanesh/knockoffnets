@@ -40,7 +40,7 @@ def main():
     # Optional arguments
     parser.add_argument('-o', '--out_path', metavar='PATH', type=str, help='Output path for model',
                         default=cfg.MODEL_DIR)
-    parser.add_argument('-d', '--device', metavar='D', type=int, help='Device id. -1 for CPU.', default=0)
+    parser.add_argument('-d', '--device_id', metavar='D', type=int, help='Device id. -1 for CPU.', default=0)
     parser.add_argument('-b', '--batch-size', type=int, default=64, metavar='N',
                         help='input batch size for training (default: 64)')
     parser.add_argument('-e', '--epochs', type=int, default=100, metavar='N',
@@ -64,12 +64,11 @@ def main():
     params = vars(args)
 
     torch.manual_seed(cfg.DEFAULT_SEED)
-    if params['device'] >= 0:
-        os.environ["CUDA_VISIBLE_DEVICES"] = str(params['device'])
+    if params['device_id'] >= 0:
+        os.environ["CUDA_VISIBLE_DEVICES"] = str(params['device_id'])
         device = torch.device('cuda')
     else:
         device = torch.device('cpu')
-    params['device'] = device
 
     # ----------- Set up dataset
     dataset_name = params['dataset']
@@ -91,7 +90,7 @@ def main():
 
     # ----------- Train
     out_path = params['out_path']
-    model_utils.train_model(model, trainset, testset=testset, **params)
+    model_utils.train_model(model, trainset, testset=testset, device=device, **params)
 
     # Store arguments
     params['created_on'] = str(datetime.now())
