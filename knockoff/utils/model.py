@@ -201,6 +201,7 @@ def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, 
                                            log_interval=log_interval)
         if test_loader is not None:
             test_loss, test_acc = test_step(model, test_loader, criterion_test, device, epoch=epoch)
+            best_test_acc = max(best_test_acc, test_acc)
 
         if test_acc >= best_test_acc:
             state = {

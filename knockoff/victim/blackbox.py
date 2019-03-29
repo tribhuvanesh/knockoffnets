@@ -19,6 +19,8 @@ from torch.utils.data import Dataset, DataLoader
 
 from knockoff.utils.type_checks import TypeCheck
 import knockoff.utils.model as model_utils
+import knockoff.models.zoo as zoo
+from knockoff import datasets
 
 __author__ = "Tribhuvanesh Orekondy"
 __maintainer__ = "Tribhuvanesh Orekondy"
@@ -49,13 +51,18 @@ class Blackbox(object):
             params = json.load(jf)
         model_arch = params['model_arch']
         num_classes = params['num_classes']
+        victim_dataset = params.get('dataset', 'imagenet')
+        modelfamily = datasets.dataset_to_modelfamily[victim_dataset]
 
         # Instantiate the model
-        model = model_utils.get_net(model_arch, n_output_classes=num_classes)
+        # model = model_utils.get_net(model_arch, n_output_classes=num_classes)
+        model = zoo.get_net(model_arch, modelfamily, pretrained=None, num_classes=num_classes)
         model = model.to(device)
 
         # Load weights
         checkpoint_path = osp.join(model_dir, 'model_best.pth.tar')
+        if not osp.exists(checkpoint_path):
+            checkpoint_path = osp.join(model_dir, 'checkpoint.pth.tar')
         print("=> loading checkpoint '{}'".format(checkpoint_path))
         checkpoint = torch.load(checkpoint_path)
         epoch = checkpoint['epoch']

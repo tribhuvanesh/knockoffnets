@@ -34,10 +34,9 @@ __status__ = "Development"
 
 
 class RandomAdversary(object):
-    def __init__(self, blackbox, queryset, out_path, batch_size=8):
+    def __init__(self, blackbox, queryset, batch_size=8):
         self.blackbox = blackbox
         self.queryset = queryset
-        self.out_path = out_path
 
         self.n_queryset = len(self.queryset)
         self.batch_size = batch_size
@@ -64,12 +63,20 @@ class RandomAdversary(object):
                                         size=min(self.batch_size, budget - len(self.transferset)))
                 self.idx_set = self.idx_set - set(idxs)
 
-                img_t = [self.queryset.samples[i][0] for i in idxs]  # Image paths
                 x_t = torch.stack([self.queryset[i][0] for i in idxs]).to(self.blackbox.device)
                 y_t = self.blackbox(x_t).cpu()
 
+                if hasattr(self.queryset, 'samples'):
+                    # Any DatasetFolder (or subclass) has this attribute
+                    # Saving image paths are space-efficient
+                    img_t = [self.queryset.samples[i][0] for i in idxs]  # Image paths
+                else:
+                    # Otherwise, store the image itself
+                    # But, we need to store the non-transformed version
+                    img_t = [self.queryset.data[i] for i in idxs]
+
                 for i in range(x_t.size(0)):
-                    self.transferset.append((img_t[i], y_t[i].cpu().squeeze()))
+                    self.transferset.append((img_t[i].squeeze(), y_t[i].cpu().squeeze()))
 
                 pbar.update(x_t.size(0))
 
@@ -117,7 +124,9 @@ def main():
     valid_datasets = datasets.__dict__.keys()
     if queryset_name not in valid_datasets:
         raise ValueError('Dataset not found. Valid arguments = {}'.format(valid_datasets))
-    queryset = datasets.__dict__[queryset_name](train=True, transform=transform_utils.DefaultTransforms.test_transform)
+    modelfamily = datasets.dataset_to_modelfamily[queryset_name]
+    transform = datasets.modelfamily_to_transforms[modelfamily]['test']
+    queryset = datasets.__dict__[queryset_name](train=True, transform=transform)
 
     # ----------- Initialize blackbox
     blackbox_dir = params['victim_model_dir']
@@ -128,7 +137,7 @@ def main():
     nworkers = params['nworkers']
     transfer_out_path = osp.join(out_path, 'transferset.pickle')
     if params['policy'] == 'random':
-        adversary = RandomAdversary(blackbox, queryset, transfer_out_path, batch_size=batch_size, num_workers=nworkers)
+        adversary = RandomAdversary(blackbox, queryset, batch_size=batch_size)
     elif params['policy'] == 'adaptive':
         raise NotImplementedError()
     else:
