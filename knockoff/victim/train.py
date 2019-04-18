@@ -8,6 +8,7 @@ import os
 from datetime import datetime
 import json
 from collections import defaultdict as dd
+import knockoff.models.zoo as zoo
 
 import numpy as np
 
@@ -25,6 +26,7 @@ from knockoff import datasets
 import knockoff.utils.transforms as transform_utils
 import knockoff.utils.model as model_utils
 import knockoff.utils.utils as knockoff_utils
+import knockoff.models.zoo as zoo
 
 __author__ = "Tribhuvanesh Orekondy"
 __maintainer__ = "Tribhuvanesh Orekondy"
@@ -58,8 +60,8 @@ def main():
     parser.add_argument('--lr-gamma', type=float, default=0.1, metavar='N',
                         help='LR Decay Rate')
     parser.add_argument('-w', '--num_workers', metavar='N', type=int, help='# Worker threads to load data', default=10)
-    parser.add_argument('--pretrained', action='store_true', help='Use pretrained network', default=False)
-    parser.add_argument('--weighted-loss', action='store_true', help='Use a weighted loss', default=False)
+    parser.add_argument('--pretrained', type=str, help='Use pretrained network', default=None)
+    parser.add_argument('--weighted-loss', action='store_true', help='Use a weighted loss', default=None)
     args = parser.parse_args()
     params = vars(args)
 
@@ -77,15 +79,19 @@ def main():
         raise ValueError('Dataset not found. Valid arguments = {}'.format(valid_datasets))
     dataset = datasets.__dict__[dataset_name]
 
-    trainset = dataset(train=True, transform=transform_utils.DefaultTransforms.train_transform)
-    testset = dataset(train=False, transform=transform_utils.DefaultTransforms.test_transform)
+    modelfamily = datasets.dataset_to_modelfamily[dataset_name]
+    train_transform = datasets.modelfamily_to_transforms[modelfamily]['train']
+    test_transform = datasets.modelfamily_to_transforms[modelfamily]['test']
+    trainset = dataset(train=True, transform=train_transform)
+    testset = dataset(train=False, transform=test_transform)
     num_classes = len(trainset.classes)
     params['num_classes'] = num_classes
 
     # ----------- Set up model
     model_name = params['model_arch']
     pretrained = params['pretrained']
-    model = model_utils.get_net(model_name, n_output_classes=num_classes, pretrained=pretrained)
+    # model = model_utils.get_net(model_name, n_output_classes=num_classes, pretrained=pretrained)
+    model = zoo.get_net(model_name, modelfamily, pretrained, num_classes=num_classes)
     model = model.to(device)
 
     # ----------- Train

@@ -2,24 +2,12 @@
 """This is a short description.
 Replace this with a more detailed description of what this file contains.
 """
-import argparse
 import os.path as osp
-import os
 
 import numpy as np
-
-from tqdm import tqdm
-
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
-
-from torchvision.datasets.folder import ImageFolder, default_loader
+from torchvision.datasets import ImageFolder
 
 import knockoff.config as cfg
-from knockoff.utils.folder import FastImageFolder
 
 __author__ = "Tribhuvanesh Orekondy"
 __maintainer__ = "Tribhuvanesh Orekondy"
@@ -27,7 +15,7 @@ __email__ = "orekondy@mpi-inf.mpg.de"
 __status__ = "Development"
 
 
-class ImageNet1k(FastImageFolder):
+class ImageNet1k(ImageFolder):
     test_frac = 0.2
 
     def __init__(self, train=True, transform=None, target_transform=None):

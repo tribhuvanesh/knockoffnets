@@ -3,30 +3,22 @@
 Replace this with a more detailed description of what this file contains.
 """
 import argparse
-import os.path as osp
-import os
-from datetime import datetime
 import json
+import os
+import os.path as osp
 import pickle
-from collections import defaultdict as dd
+from datetime import datetime
 
 import numpy as np
-
-from tqdm import tqdm
-
 import torch
-import torch.nn as nn
-import torch.nn.functional as F
-import torch.optim as optim
-from torch.utils import data as torch_data
-from torch.utils.data import Dataset, DataLoader
+from PIL import Image
+from torch.utils.data import Dataset
 from torchvision.datasets.folder import ImageFolder, IMG_EXTENSIONS, default_loader
 
 import knockoff.config as cfg
-from knockoff import datasets
-import knockoff.utils.transforms as transform_utils
 import knockoff.utils.model as model_utils
-import knockoff.utils.utils as knockoff_utils
+from knockoff import datasets
+import knockoff.models.zoo as zoo
 
 __author__ = "Tribhuvanesh Orekondy"
 __maintainer__ = "Tribhuvanesh Orekondy"
@@ -34,7 +26,9 @@ __email__ = "orekondy@mpi-inf.mpg.de"
 __status__ = "Development"
 
 
-class TransferSet(ImageFolder):
+class TransferSetImagePaths(ImageFolder):
+    """TransferSet Dataset, for when images are stored as *paths*"""
+
     def __init__(self, samples, transform=None, target_transform=None):
         self.loader = default_loader
         self.extensions = IMG_EXTENSIONS
@@ -42,6 +36,47 @@ class TransferSet(ImageFolder):
         self.targets = [s[1] for s in samples]
         self.transform = transform
         self.target_transform = target_transform
+
+
+class TransferSetImages(Dataset):
+    def __init__(self, samples, transform=None, target_transform=None):
+        self.samples = samples
+        self.transform = transform
+        self.target_transform = target_transform
+
+        self.data = [self.samples[i][0] for i in range(len(self.samples))]
+        self.targets = [self.samples[i][1] for i in range(len(self.samples))]
+
+    def __getitem__(self, index):
+        img, target = self.data[index], self.targets[index]
+
+        # doing this so that it is consistent with all other datasets
+        # to return a PIL Image
+        img = Image.fromarray(img)
+
+        if self.transform is not None:
+            img = self.transform(img)
+
+        if self.target_transform is not None:
+            target = self.target_transform(target)
+
+        return img, target
+
+    def __len__(self):
+        return len(self.data)
+
+
+def samples_to_transferset(samples, budget=None, transform=None, target_transform=None):
+    # Images are either stored as paths, or numpy arrays
+    sample_x = samples[0][0]
+    assert budget <= len(samples), 'Required {} samples > Found {} samples'.format(budget, len(samples))
+
+    if isinstance(sample_x, str):
+        return TransferSetImagePaths(samples[:budget], transform=transform, target_transform=target_transform)
+    elif isinstance(sample_x, np.ndarray):
+        return TransferSetImages(samples[:budget], transform=transform, target_transform=target_transform)
+    else:
+        raise ValueError('type(x_i) ({}) not recognized. Supported types = (str, np.ndarray)'.format(type(sample_x)))
 
 
 def main():
@@ -71,7 +106,7 @@ def main():
     parser.add_argument('--lr-gamma', type=float, default=0.1, metavar='N',
                         help='LR Decay Rate')
     parser.add_argument('-w', '--num_workers', metavar='N', type=int, help='# Worker threads to load data', default=10)
-    parser.add_argument('--pretrained', action='store_true', help='Use pretrained network', default=False)
+    parser.add_argument('--pretrained', type=str, help='Use pretrained network', default=None)
     parser.add_argument('--weighted-loss', action='store_true', help='Use a weighted loss', default=False)
     args = parser.parse_args()
     params = vars(args)
@@ -94,31 +129,34 @@ def main():
     # ----------- Set up testset
     dataset_name = params['testdataset']
     valid_datasets = datasets.__dict__.keys()
+    modelfamily = datasets.dataset_to_modelfamily[dataset_name]
+    transform = datasets.modelfamily_to_transforms[modelfamily]['test']
     if dataset_name not in valid_datasets:
         raise ValueError('Dataset not found. Valid arguments = {}'.format(valid_datasets))
     dataset = datasets.__dict__[dataset_name]
-    testset = dataset(train=False, transform=transform_utils.DefaultTransforms.test_transform)
+    testset = dataset(train=False, transform=transform)
     if len(testset.classes) != num_classes:
         raise ValueError('# Transfer classes ({}) != # Testset classes ({})'.format(num_classes, len(testset.classes)))
 
     # ----------- Set up model
     model_name = params['model_arch']
     pretrained = params['pretrained']
-    model = model_utils.get_net(model_name, n_output_classes=num_classes, pretrained=pretrained)
+    # model = model_utils.get_net(model_name, n_output_classes=num_classes, pretrained=pretrained)
+    model = zoo.get_net(model_name, modelfamily, pretrained, num_classes=num_classes)
     model = model.to(device)
 
     # ----------- Train
     budgets = [int(b) for b in params['budgets'].split(',')]
 
     for b in budgets:
-        print()
-        print('=> Training at budget = {}'.format(b))
-
         np.random.seed(cfg.DEFAULT_SEED)
         torch.manual_seed(cfg.DEFAULT_SEED)
         torch.cuda.manual_seed(cfg.DEFAULT_SEED)
 
-        transferset = TransferSet(transferset_samples[:b], transform=transform_utils.DefaultTransforms.test_transform)
+        transferset = samples_to_transferset(transferset_samples, budget=b, transform=transform)
+        print()
+        print('=> Training at budget = {}'.format(len(transferset)))
+
         checkpoint_suffix = '.{}'.format(b)
         criterion_train = model_utils.soft_cross_entropy
         model_utils.train_model(model, transferset, model_dir, testset=testset, criterion_train=criterion_train,

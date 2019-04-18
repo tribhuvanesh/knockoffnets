@@ -3,9 +3,9 @@
 Replace this with a more detailed description of what this file contains.
 """
 import os.path as osp
+from torchvision.datasets import ImageFolder
 
 import knockoff.config as cfg
-from knockoff.utils.folder import FastImageFolder
 
 __author__ = "Tribhuvanesh Orekondy"
 __maintainer__ = "Tribhuvanesh Orekondy"
@@ -13,7 +13,7 @@ __email__ = "orekondy@mpi-inf.mpg.de"
 __status__ = "Development"
 
 
-class TinyImageNet200(FastImageFolder):
+class TinyImageNet200(ImageFolder):
     """
     Dataset for TinyImageNet200
 

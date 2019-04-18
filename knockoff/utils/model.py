@@ -109,7 +109,7 @@ def train_step(model, train_loader, criterion, optimizer, epoch, device, log_int
     return train_loss_batch, acc
 
 
-def test_step(model, test_loader, criterion, device, epoch=0.):
+def test_step(model, test_loader, criterion, device, epoch=0., silent=False):
     model.eval()
     test_loss = 0.
     correct = 0
@@ -134,8 +134,9 @@ def test_step(model, test_loader, criterion, device, epoch=0.):
     acc = 100. * correct / total
     test_loss /= total
 
-    print('[Test]  Epoch: {}\tLoss: {:.6f}\tAcc: {:.1f}% ({}/{})'.format(epoch, test_loss, acc,
-                                                                         correct, total))
+    if not silent:
+        print('[Test]  Epoch: {}\tLoss: {:.6f}\tAcc: {:.1f}% ({}/{})'.format(epoch, test_loss, acc,
+                                                                             correct, total))
 
     return test_loss, acc
 
@@ -147,6 +148,7 @@ def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, 
         device = torch.device('cuda')
     if not osp.exists(out_path):
         knockoff_utils.create_dir(out_path)
+    run_id = str(datetime.now())
 
     # Data loaders
     train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
@@ -178,7 +180,8 @@ def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, 
     optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum, weight_decay=5e-4)
     scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=lr_step, gamma=lr_gamma)
     start_epoch = 1
-    best_test_acc, test_acc = -1., -1.
+    best_train_acc, train_acc = -1., -1.
+    best_test_acc, test_acc, test_loss = -1., -1., -1.
 
     # Resume if required
     if resume is not None:
@@ -194,15 +197,25 @@ def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, 
         else:
             print("=> no checkpoint found at '{}'".format(model_path))
 
+    # Initialize logging
+    log_path = osp.join(out_path, 'train{}.log.tsv'.format(checkpoint_suffix))
+    if not osp.exists(log_path):
+        with open(log_path, 'w') as wf:
+            columns = ['run_id', 'epoch', 'split', 'loss', 'accuracy', 'best_accuracy']
+            wf.write('\t'.join(columns) + '\n')
+
     model_out_path = osp.join(out_path, 'checkpoint{}.pth.tar'.format(checkpoint_suffix))
     for epoch in range(start_epoch, epochs + 1):
         scheduler.step(epoch)
         train_loss, train_acc = train_step(model, train_loader, criterion_train, optimizer, epoch, device,
                                            log_interval=log_interval)
+        best_train_acc = max(best_train_acc, train_acc)
+
         if test_loader is not None:
             test_loss, test_acc = test_step(model, test_loader, criterion_test, device, epoch=epoch)
             best_test_acc = max(best_test_acc, test_acc)
 
+        # Checkpoint
         if test_acc >= best_test_acc:
             state = {
                 'epoch': epoch,
@@ -213,5 +226,12 @@ def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, 
                 'created_on': str(datetime.now()),
             }
             torch.save(state, model_out_path)
+
+        # Log
+        with open(log_path, 'a') as af:
+            train_cols = [run_id, epoch, 'train', train_loss, train_acc, best_train_acc]
+            af.write('\t'.join([str(c) for c in train_cols]) + '\n')
+            test_cols = [run_id, epoch, 'test', test_loss, test_acc, best_test_acc]
+            af.write('\t'.join([str(c) for c in test_cols]) + '\n')
 
     return model

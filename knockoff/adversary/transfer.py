@@ -63,6 +63,10 @@ class RandomAdversary(object):
                                         size=min(self.batch_size, budget - len(self.transferset)))
                 self.idx_set = self.idx_set - set(idxs)
 
+                if len(self.idx_set) == 0:
+                    print('=> Query set exhausted. Now repeating input examples.')
+                    self.idx_set = set(range(len(self.queryset)))
+
                 x_t = torch.stack([self.queryset[i][0] for i in idxs]).to(self.blackbox.device)
                 y_t = self.blackbox(x_t).cpu()
 
@@ -74,9 +78,12 @@ class RandomAdversary(object):
                     # Otherwise, store the image itself
                     # But, we need to store the non-transformed version
                     img_t = [self.queryset.data[i] for i in idxs]
+                    if isinstance(self.queryset.data[0], torch.Tensor):
+                        img_t = [x.numpy() for x in img_t]
 
                 for i in range(x_t.size(0)):
-                    self.transferset.append((img_t[i].squeeze(), y_t[i].cpu().squeeze()))
+                    img_t_i = img_t[i].squeeze() if isinstance(img_t[i], np.ndarray) else img_t[i]
+                    self.transferset.append((img_t_i, y_t[i].cpu().squeeze()))
 
                 pbar.update(x_t.size(0))
 

@@ -6,15 +6,18 @@ from knockoff.datasets.cubs200 import CUBS200
 from knockoff.datasets.diabetic5 import Diabetic5
 from knockoff.datasets.imagenet1k import ImageNet1k
 from knockoff.datasets.indoor67 import Indoor67
-from knockoff.datasets.mnistlike import MNIST, EMNIST, FashionMNIST
+from knockoff.datasets.mnistlike import MNIST, KMNIST, EMNIST, EMNISTLetters, FashionMNIST
 from knockoff.datasets.tinyimagenet200 import TinyImageNet200
 
 # Create a mapping of dataset -> dataset_type
-# This is helpful to determine which family of model needs to be loaded e.g., imagenet
+# This is helpful to determine which (a) family of model needs to be loaded e.g., imagenet and
+# (b) input transform to apply
 dataset_to_modelfamily = {
     # MNIST
     'MNIST': 'mnist',
+    'KMNIST': 'mnist',
     'EMNIST': 'mnist',
+    'EMNISTLetters': 'mnist',
     'FashionMNIST': 'mnist',
 
     # Cifar
