@@ -6,7 +6,7 @@ from torchvision.datasets import CIFAR10 as TVCIFAR10
 from torchvision.datasets import CIFAR100 as TVCIFAR100
 from torchvision.datasets import SVHN as TVSVHN
 
-import defenses.config as cfg
+import knockoff.config as cfg
 from torchvision.datasets.utils import check_integrity
 import pickle
 

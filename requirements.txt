@@ -1,0 +1,9 @@
+certifi==2019.6.16
+munch==2.3.2
+numpy==1.16.4
+Pillow==6.0.0
+pretrainedmodels==0.7.4
+six==1.12.0
+torch==1.1.0
+torchvision==0.3.0
+tqdm==4.32.2
