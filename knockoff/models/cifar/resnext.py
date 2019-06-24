@@ -122,5 +122,5 @@ class CifarResNeXt(nn.Module):
 def resnext(**kwargs):
     """Constructs a ResNeXt.
     """
-    model = CifarResNeXt(**kwargs)
+    model = CifarResNeXt(cardinality=16, depth=29, **kwargs)
     return model

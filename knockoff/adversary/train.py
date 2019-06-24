@@ -13,6 +13,7 @@ import numpy as np
 import torch
 from PIL import Image
 from torch.utils.data import Dataset
+from torch import optim
 from torchvision.datasets.folder import ImageFolder, IMG_EXTENSIONS, default_loader
 
 import knockoff.config as cfg
@@ -79,6 +80,21 @@ def samples_to_transferset(samples, budget=None, transform=None, target_transfor
         raise ValueError('type(x_i) ({}) not recognized. Supported types = (str, np.ndarray)'.format(type(sample_x)))
 
 
+def get_optimizer(parameters, optimizer_type, lr=0.01, momentum=0.5, **kwargs):
+    assert optimizer_type in ['sgd', 'sgdm', 'adam', 'adagrad']
+    if optimizer_type == 'sgd':
+        optimizer = optim.SGD(parameters, lr)
+    elif optimizer_type == 'sgdm':
+        optimizer = optim.SGD(parameters, lr, momentum=momentum)
+    elif optimizer_type == 'adagrad':
+        optimizer = optim.Adagrad(parameters)
+    elif optimizer_type == 'adam':
+        optimizer = optim.Adam(parameters)
+    else:
+        raise ValueError('Unrecognized optimizer type')
+    return optimizer
+
+
 def main():
     parser = argparse.ArgumentParser(description='Train a model')
     # Required arguments
@@ -108,6 +124,9 @@ def main():
     parser.add_argument('-w', '--num_workers', metavar='N', type=int, help='# Worker threads to load data', default=10)
     parser.add_argument('--pretrained', type=str, help='Use pretrained network', default=None)
     parser.add_argument('--weighted-loss', action='store_true', help='Use a weighted loss', default=False)
+    # Attacker's defense
+    parser.add_argument('--argmaxed', action='store_true', help='Only consider argmax labels', default=False)
+    parser.add_argument('--optimizer_choice', type=str, help='Optimizer', default='sgdm', choices=('sgd', 'sgdm', 'adam', 'adagrad'))
     args = parser.parse_args()
     params = vars(args)
 
@@ -125,6 +144,18 @@ def main():
         transferset_samples = pickle.load(rf)
     num_classes = transferset_samples[0][1].size(0)
     print('=> found transfer set with {} samples, {} classes'.format(len(transferset_samples), num_classes))
+
+    # ----------- Clean up transfer (if necessary)
+    if params['argmaxed']:
+        new_transferset_samples = []
+        print('=> Using argmax labels (instead of posterior probabilities)')
+        for i in range(len(transferset_samples)):
+            x_i, y_i = transferset_samples[i]
+            argmax_k = y_i.argmax()
+            y_i_1hot = torch.zeros_like(y_i)
+            y_i_1hot[argmax_k] = 1.
+            new_transferset_samples.append((x_i, y_i_1hot))
+        transferset_samples = new_transferset_samples
 
     # ----------- Set up testset
     dataset_name = params['testdataset']
@@ -157,10 +188,13 @@ def main():
         print()
         print('=> Training at budget = {}'.format(len(transferset)))
 
+        optimizer = get_optimizer(model.parameters(), params['optimizer_choice'], **params)
+        print(params)
+
         checkpoint_suffix = '.{}'.format(b)
         criterion_train = model_utils.soft_cross_entropy
         model_utils.train_model(model, transferset, model_dir, testset=testset, criterion_train=criterion_train,
-                                checkpoint_suffix=checkpoint_suffix, device=device, **params)
+                                checkpoint_suffix=checkpoint_suffix, device=device, optimizer=optimizer, **params)
 
     # Store arguments
     params['created_on'] = str(datetime.now())
