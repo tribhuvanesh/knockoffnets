@@ -117,13 +117,13 @@ Specifically, the knockoffs are resnet34s at B=60k using imagenet as the query s
 
 | $F_V$      | Random | Adaptive |
 |------------|:--------:|:----------:|
-| Caltech256 | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/caltech256-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/caltech256-resnet34-imagenet-adaptive-60k.zip))      |
-| CUBS200    | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/cubs200-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/cubs200-resnet34-imagenet-adaptive-60k.zip))      |
-| Indoor67   | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/indoor67-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/indoor67-resnet34-imagenet-adaptive-60k.zip))      |
-| Diabetic5  | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/diabetic5-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/diabetic5-resnet34-imagenet-adaptive-60k.zip))      |
+| Caltech256 | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/caltech256-resnet34-imagenet-random-60k.zip)    | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/caltech256-resnet34-imagenet-adaptive-60k.zip)      |
+| CUBS200    | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/cubs200-resnet34-imagenet-random-60k.zip)    | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/cubs200-resnet34-imagenet-adaptive-60k.zip)      |
+| Indoor67   | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/indoor67-resnet34-imagenet-random-60k.zip)    | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/indoor67-resnet34-imagenet-adaptive-60k.zip)      |
+| Diabetic5  | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/diabetic5-resnet34-imagenet-random-60k.zip)    | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/diabetic5-resnet34-imagenet-adaptive-60k.zip)      |
 
 ### TODOs
-Since the current publicly available code is being significantly refactored since the initial version, there are a few things remaining: 
+Since the current publicly available code has been significantly refactored from the initially published version, there are a few pending items: 
   * [ ] Upload pretrained models
   * [ ] Convert pretrained models (`torchvision.models`) to cadene models (`pretrained`)
   * [ ] Upload adaptive implementation
