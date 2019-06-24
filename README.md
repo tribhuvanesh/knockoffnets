@@ -117,22 +117,20 @@ Specifically, the knockoffs are resnet34s at B=60k using imagenet as the query s
 
 | $F_V$      | Random | Adaptive |
 |------------|:--------:|:----------:|
-| Caltech256 | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/caltech256-resnet34-imagenet-random-60k.zip)    | [zip]()      |
-| CUBS200    | [zip]()    | [zip]()      |
-| Indoor67   | [zip]()    | [zip]()      |
-| Diabetic5  | [zip]()    | [zip]()      |
+| Caltech256 | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/caltech256-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/caltech256-resnet34-imagenet-adaptive-60k.zip))      |
+| CUBS200    | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/cubs200-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/cubs200-resnet34-imagenet-adaptive-60k.zip))      |
+| Indoor67   | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/indoor67-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/indoor67-resnet34-imagenet-adaptive-60k.zip))      |
+| Diabetic5  | [zip](https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/diabetic5-resnet34-imagenet-random-60k.zip)    | [zip]((https://datasets.d2.mpi-inf.mpg.de/orekondy19cvpr/victim_models/diabetic5-resnet34-imagenet-adaptive-60k.zip))      |
 
 ### TODOs
 Since the current publicly available code is being significantly refactored since the initial version, there are a few things remaining: 
   * [ ] Upload pretrained models
   * [ ] Convert pretrained models (`torchvision.models`) to cadene models (`pretrained`)
   * [ ] Upload adaptive implementation
-  
-## Contact
-In case of feedback, suggestions, or issues, please contact [Tribhuvanesh Orekondy](https://tribhuvanesh.github.io/)
+
 
 ## Citation
-If you found this work or code useful, please cite as:
+If you found this work or code useful, please cite us:
 ```
 @inproceedings{orekondy19knockoff,
     TITLE = {Knockoff Nets: Stealing Functionality of Black-Box Models},
@@ -141,3 +139,7 @@ If you found this work or code useful, please cite as:
     BOOKTITLE = {CVPR},
 }
 ```
+
+
+## Contact
+In case of feedback, suggestions, or issues, please contact [Tribhuvanesh Orekondy](https://tribhuvanesh.github.io/)
