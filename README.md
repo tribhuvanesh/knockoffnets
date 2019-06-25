@@ -34,10 +34,10 @@ You will need six datasets to perform all experiments in the paper, all extracte
  * Victim datasets
    * Caltech256 ([Link](http://www.vision.caltech.edu/Image_Datasets/Caltech256/). Images in `data/256_ObjectCategories/<classname>/*.jpg`)
    * CUB-200-2011 ([Link](http://www.vision.caltech.edu/visipedia/CUB-200-2011.html). Images in `data/CUB_200_2011/images/<classname>/*.jpg`)
-   * Indoor Scenes ([Link](http://web.mit.edu/torralba/www/indoor.html). Images in `data/indoor/Images/*.jpg`)
+   * Indoor Scenes ([Link](http://web.mit.edu/torralba/www/indoor.html). Images in `data/indoor/Images/<classname>/*.jpg`)
    * Diabetic Retinopathy ([Link](https://www.kaggle.com/c/diabetic-retinopathy-detection). Images in `data/diabetic_retinopathy/training_imgs/<classname>/*.jpg`)
  * Adversarial datasets
-   * ImageNet ILSVRC 2012 ([Link](http://image-net.org/download-images). Images in `data/ILSVRC2012/training_imgs/*.jpg`)
+   * ImageNet ILSVRC 2012 ([Link](http://image-net.org/download-images). Images in `data/ILSVRC2012/training_imgs/<classname>/*.jpg`)
    * OpenImages ([Link](https://storage.googleapis.com/openimages/web/index.html). Images in `data/openimages/<classname>/*.jpg`)
 
 ## Attack: Overview
