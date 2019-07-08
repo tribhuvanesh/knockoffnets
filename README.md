@@ -71,7 +71,7 @@ $ python knockoff/victim/train.py DS_NAME ARCH -d DEV_ID -o models/victim/VIC_DI
 $ python knockoff/victim/train.py --help
 
 # Example (CUB-200):
-$ python knockoff/victim/train.py CUBS200 resnet34 -d 1 -o models/victim/cubs200-resnet34 -e 10 --log-interval 25 --pretrained
+$ python knockoff/victim/train.py CUBS200 resnet34 -d 1 -o models/victim/cubs200-resnet34 -e 10 --log-interval 25 --pretrained imagenet
 ```
 
 ## Training Knockoff Models
@@ -106,7 +106,7 @@ $ python knockoff/adversary/train.py models/adversary/ADV_DIR ARCH DS_NAME --bud
 $ python knockoff/adversary/train.py --help
 
 # Example (CUB-200)
-$ python knockoff/adversary/train.py models/adversary/cubs200-resnet34-random resnet34 CUBS200 --budgets 60000 -d 0 --pretrained --log-interval 100 --epochs 200 --lr 0.01 
+$ python knockoff/adversary/train.py models/adversary/cubs200-resnet34-random resnet34 CUBS200 --budgets 60000 -d 0 --pretrained imagenet --log-interval 100 --epochs 200 --lr 0.01 
 
 ```
 
