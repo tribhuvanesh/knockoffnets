@@ -12,15 +12,17 @@ def get_net(modelname, modeltype, pretrained=None, **kwargs):
     if pretrained and pretrained is not None:
         return get_pretrainednet(modelname, modeltype, pretrained, **kwargs)
     else:
-        # This should have ideally worked:
-        # return eval('knockoff.models.{}.{}'.format(modeltype, modelname))(**kwargs)
-        # But, there's a bug in pretrained models which ignores the num_classes attribute.
-        # So, temporarily load the model and replace the last linear layer
-        model = eval('knockoff.models.{}.{}'.format(modeltype, modelname))()
-        if 'num_classes' in kwargs:
-            num_classes = kwargs['num_classes']
-            in_feat = model.last_linear.in_features
-            model.last_linear = nn.Linear(in_feat, num_classes)
+        try:
+            # This should have ideally worked:
+            model = eval('knockoff.models.{}.{}'.format(modeltype, modelname))(**kwargs)
+        except AssertionError:
+            # But, there's a bug in pretrained models which ignores the num_classes attribute.
+            # So, temporarily load the model and replace the last linear layer
+            model = eval('knockoff.models.{}.{}'.format(modeltype, modelname))()
+            if 'num_classes' in kwargs:
+                num_classes = kwargs['num_classes']
+                in_feat = model.last_linear.in_features
+                model.last_linear = nn.Linear(in_feat, num_classes)
         return model
 
 
