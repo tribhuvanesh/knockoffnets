@@ -19,7 +19,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
 from torch.utils import data as torch_data
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset, DataLoader, Subset
 
 import knockoff.config as cfg
 from knockoff import datasets
@@ -60,12 +60,13 @@ def main():
     parser.add_argument('--lr-gamma', type=float, default=0.1, metavar='N',
                         help='LR Decay Rate')
     parser.add_argument('-w', '--num_workers', metavar='N', type=int, help='# Worker threads to load data', default=10)
+    parser.add_argument('--train_subset', type=int, help='Use a subset of train set', default=None)
     parser.add_argument('--pretrained', type=str, help='Use pretrained network', default=None)
     parser.add_argument('--weighted-loss', action='store_true', help='Use a weighted loss', default=None)
     args = parser.parse_args()
     params = vars(args)
 
-    torch.manual_seed(cfg.DEFAULT_SEED)
+    # torch.manual_seed(cfg.DEFAULT_SEED)
     if params['device_id'] >= 0:
         os.environ["CUDA_VISIBLE_DEVICES"] = str(params['device_id'])
         device = torch.device('cuda')
@@ -86,6 +87,12 @@ def main():
     testset = dataset(train=False, transform=test_transform)
     num_classes = len(trainset.classes)
     params['num_classes'] = num_classes
+
+    if params['train_subset'] is not None:
+        idxs = np.arange(len(trainset))
+        ntrainsubset = params['train_subset']
+        idxs = np.random.choice(idxs, size=ntrainsubset, replace=False)
+        trainset = Subset(trainset, idxs)
 
     # ----------- Set up model
     model_name = params['model_arch']

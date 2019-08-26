@@ -30,7 +30,7 @@ def get_pretrainednet(modelname, modeltype, pretrained='imagenet', num_classes=1
     if pretrained == 'imagenet':
         return get_imagenet_pretrainednet(modelname, num_classes, **kwargs)
     elif osp.exists(pretrained):
-        model = eval('knockoff.models.{}.{}'.format(modeltype, modelname))(num_classes, **kwargs)
+        model = eval('knockoff.models.{}.{}'.format(modeltype, modelname))(num_classes=num_classes, **kwargs)
         checkpoint = torch.load(pretrained)
         pretrained_state_dict = checkpoint.get('state_dict', checkpoint)
         copy_weights_(pretrained_state_dict, model.state_dict())
