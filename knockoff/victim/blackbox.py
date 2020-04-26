@@ -73,6 +73,12 @@ class Blackbox(object):
         blackbox = cls(model, device, output_type)
         return blackbox
 
+    def get_model(self):
+        print('======================================================================================================')
+        print('WARNING: USE get_model() *ONLY* FOR DEBUGGING')
+        print('======================================================================================================')
+        return self.__model
+
     def truncate_output(self, y_t_probs):
         if self.topk is not None:
             # Zero-out everything except the top-k predictions
@@ -91,15 +97,32 @@ class Blackbox(object):
 
         return y_t_probs
 
+    def train(self):
+        raise ValueError('Cannot run blackbox model in train mode')
+
+    def eval(self):
+        # Always in eval mode
+        pass
+
+    def get_call_count(self):
+        return self.__call_count
+
     def __call__(self, query_input):
         TypeCheck.multiple_image_blackbox_input_tensor(query_input)
 
         with torch.no_grad():
             query_input = query_input.to(self.device)
             query_output = self.__model(query_input)
+
+            if isinstance(query_output, tuple):
+                # In certain cases, the models additional outputs during forward pass
+                # e.g., activation maps in WideResNets of Zero-shot KT
+                # Restrict to just the logits -- which we assume by default is the first element
+                query_output = query_output[0]
+
             self.__call_count += query_input.shape[0]
 
-            query_output_probs = F.softmax(query_output, dim=1).cpu()
+            query_output_probs = F.softmax(query_output, dim=1)
 
         query_output_probs = self.truncate_output(query_output_probs)
         return query_output_probs

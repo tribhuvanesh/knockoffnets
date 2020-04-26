@@ -47,3 +47,7 @@ from pretrainedmodels import se_resnext50_32x4d
 from pretrainedmodels import se_resnext101_32x4d
 from pretrainedmodels import pnasnet5large
 from pretrainedmodels import polynet
+
+from .bagnets import bagnet9
+from .bagnets import bagnet17
+from .bagnets import bagnet33

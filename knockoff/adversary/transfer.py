@@ -102,6 +102,8 @@ def main():
                         required=True)
     parser.add_argument('--queryset', metavar='TYPE', type=str, help='Adversary\'s dataset (P_A(X))', required=True)
     parser.add_argument('--batch_size', metavar='TYPE', type=int, help='Batch size of queries', default=8)
+    parser.add_argument('--root', metavar='DIR', type=str, help='Root directory for ImageFolder', default=None)
+    parser.add_argument('--modelfamily', metavar='TYPE', type=str, help='Model family', default=None)
     # parser.add_argument('--topk', metavar='N', type=int, help='Use posteriors only from topk classes',
     #                     default=None)
     # parser.add_argument('--rounding', metavar='N', type=int, help='Round posteriors to these many decimals',
@@ -131,9 +133,13 @@ def main():
     valid_datasets = datasets.__dict__.keys()
     if queryset_name not in valid_datasets:
         raise ValueError('Dataset not found. Valid arguments = {}'.format(valid_datasets))
-    modelfamily = datasets.dataset_to_modelfamily[queryset_name]
+    modelfamily = datasets.dataset_to_modelfamily[queryset_name] if params['modelfamily'] is None else params['modelfamily']
     transform = datasets.modelfamily_to_transforms[modelfamily]['test']
-    queryset = datasets.__dict__[queryset_name](train=True, transform=transform)
+    if queryset_name == 'ImageFolder':
+        assert params['root'] is not None, 'argument "--root ROOT" required for ImageFolder'
+        queryset = datasets.__dict__[queryset_name](root=params['root'], transform=transform)
+    else:
+        queryset = datasets.__dict__[queryset_name](train=True, transform=transform)
 
     # ----------- Initialize blackbox
     blackbox_dir = params['victim_model_dir']

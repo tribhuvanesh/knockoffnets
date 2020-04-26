@@ -8,7 +8,6 @@ import os
 from datetime import datetime
 import json
 from collections import defaultdict as dd
-import knockoff.models.zoo as zoo
 
 import numpy as np
 

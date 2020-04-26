@@ -65,7 +65,7 @@ def soft_cross_entropy(pred, soft_targets, weights=None):
         return torch.mean(torch.sum(- soft_targets * F.log_softmax(pred, dim=1), 1))
 
 
-def train_step(model, train_loader, criterion, optimizer, epoch, device, log_interval=10):
+def train_step(model, train_loader, criterion, optimizer, epoch, device, log_interval=10, writer=None):
     model.train()
     train_loss = 0.
     correct = 0
@@ -81,6 +81,9 @@ def train_step(model, train_loader, criterion, optimizer, epoch, device, log_int
         loss = criterion(outputs, targets)
         loss.backward()
         optimizer.step()
+
+        if writer is not None:
+            pass
 
         train_loss += loss.item()
         _, predicted = outputs.max(1)
@@ -102,6 +105,10 @@ def train_step(model, train_loader, criterion, optimizer, epoch, device, log_int
                 exact_epoch, batch_idx * len(inputs), len(train_loader.dataset), 100. * batch_idx / len(train_loader),
                 loss.item(), acc, correct, total))
 
+        if writer is not None:
+            writer.add_scalar('Loss/train', loss.item(), exact_epoch)
+            writer.add_scalar('Accuracy/train', acc, exact_epoch)
+
     t_end = time.time()
     t_epoch = int(t_end - t_start)
     acc = 100. * correct / total
@@ -109,7 +116,7 @@ def train_step(model, train_loader, criterion, optimizer, epoch, device, log_int
     return train_loss_batch, acc
 
 
-def test_step(model, test_loader, criterion, device, epoch=0., silent=False):
+def test_step(model, test_loader, criterion, device, epoch=0., silent=False, writer=None):
     model.eval()
     test_loss = 0.
     correct = 0
@@ -138,13 +145,17 @@ def test_step(model, test_loader, criterion, device, epoch=0., silent=False):
         print('[Test]  Epoch: {}\tLoss: {:.6f}\tAcc: {:.1f}% ({}/{})'.format(epoch, test_loss, acc,
                                                                              correct, total))
 
+    if writer is not None:
+        writer.add_scalar('Loss/test', test_loss, epoch)
+        writer.add_scalar('Accuracy/test', acc, epoch)
+
     return test_loss, acc
 
 
 def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, criterion_test=None, testset=None,
                 device=None, num_workers=10, lr=0.1, momentum=0.5, lr_step=30, lr_gamma=0.1, resume=None,
                 epochs=100, log_interval=100, weighted_loss=False, checkpoint_suffix='', optimizer=None, scheduler=None,
-                **kwargs):
+                writer=None, **kwargs):
     if device is None:
         device = torch.device('cuda')
     if not osp.exists(out_path):
@@ -152,9 +163,9 @@ def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, 
     run_id = str(datetime.now())
 
     # Data loaders
-    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers)
+    train_loader = DataLoader(trainset, batch_size=batch_size, shuffle=True, num_workers=num_workers, pin_memory=True)
     if testset is not None:
-        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers)
+        test_loader = DataLoader(testset, batch_size=batch_size, shuffle=False, num_workers=num_workers, pin_memory=True)
     else:
         test_loader = None
 
@@ -209,9 +220,9 @@ def train_model(model, trainset, out_path, batch_size=64, criterion_train=None, 
 
     model_out_path = osp.join(out_path, 'checkpoint{}.pth.tar'.format(checkpoint_suffix))
     for epoch in range(start_epoch, epochs + 1):
-        scheduler.step(epoch)
         train_loss, train_acc = train_step(model, train_loader, criterion_train, optimizer, epoch, device,
                                            log_interval=log_interval)
+        scheduler.step(epoch)
         best_train_acc = max(best_train_acc, train_acc)
 
         if test_loader is not None:
