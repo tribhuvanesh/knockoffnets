@@ -1,4 +1,4 @@
-certifi==2019.6.16
+certifi==2022.12.7
 munch==2.3.2
 numpy==1.16.4
 Pillow>=6.0.0
